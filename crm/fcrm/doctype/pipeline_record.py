@@ -10,7 +10,7 @@ from frappe.desk.form.assign_to import _add as assign
 from frappe.model.document import Document
 from frappe.utils import validate_email_address
 
-from crm.fcrm.doctype.utils import add_or_remove_lost_reason_section_in_sidepanel
+from crm.fcrm.doctype.utils import add_or_remove_lost_reason_section_in_sidepanel, ensure_organization_exists
 
 
 class PipelineRecord(Document):
@@ -32,6 +32,13 @@ class PipelineRecord(Document):
 		if not self.is_new() and self.has_value_changed(self.OWNER_FIELD) and owner:
 			self.share_with_agent(owner)
 			self.assign_agent(owner)
+
+	def _validate_links(self):
+		# See CRMLead._validate_links(): Document._validate_links() runs before
+		# `validate`, so the backing CRM Organization must be created here.
+		if self.organization:
+			ensure_organization_exists(self.organization, self)
+		super()._validate_links()
 
 	def after_insert(self):
 		owner = self.get(self.OWNER_FIELD)

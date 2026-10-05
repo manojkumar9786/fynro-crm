@@ -5,7 +5,7 @@
     :rows="rows"
     :options="{
       getRowRoute: (row) => ({
-        name: 'Lead',
+        name: detailRouteName,
         params: { leadId: row.name },
         query: { view: route.query.view, viewType: route.params.viewType },
       }),
@@ -64,9 +64,6 @@
                   })
               "
             />
-          </div>
-          <div v-else-if="column.key === 'status'">
-            <IndicatorIcon :class="item.color" />
           </div>
           <div v-else-if="column.key === 'lead_name'">
             <Avatar
@@ -182,6 +179,31 @@
             "
           />
           <div
+            v-else-if="isStatusColumn(column.key)"
+            class="min-w-0 max-w-full truncate text-base"
+            @click.stop
+          >
+            <Dropdown
+              :options="getStatusOptions(row, column.key)"
+              placement="bottom-start"
+            >
+              <template #default="{ open }">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  class="-ml-1.5 min-w-0 max-w-full"
+                  :label="getLabel(label, column) || '—'"
+                  :iconRight="open ? 'chevron-up' : 'chevron-down'"
+                  @click.stop.prevent
+                >
+                  <template #prefix>
+                    <IndicatorIcon :class="item.color" />
+                  </template>
+                </Button>
+              </template>
+            </Dropdown>
+          </div>
+          <div
             v-else-if="label"
             class="truncate text-base"
             @click="
@@ -242,14 +264,18 @@ import {
   ListFooter,
   Dropdown,
   Tooltip,
+  call,
+  toast,
 } from 'frappe-ui'
 import { sessionStore } from '@/stores/session'
+import { statusesStore } from '@/stores/statuses'
 import { ref, computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 
-defineProps({
+const props = defineProps({
   rows: { type: Array, required: true },
   columns: { type: Array, required: true },
+  detailRouteName: { type: String, default: 'Lead' },
   options: {
     type: Object,
     default: () => ({
@@ -292,6 +318,36 @@ const isLikeFilterApplied = computed(() => {
 })
 
 const { user } = sessionStore()
+const { statusOptions } = statusesStore()
+
+// Columns that are status-type Link fields get an inline, click-to-change
+// dropdown in the list (instead of opening the record) — "status" is the
+// main Lead Status, "calling_status" the call-outcome sub-status.
+const STATUS_COLUMN_DOCTYPE_KEY = { status: 'lead', calling_status: 'calling' }
+
+function isStatusColumn(key) {
+  return Object.hasOwn(STATUS_COLUMN_DOCTYPE_KEY, key)
+}
+
+function getStatusOptions(row, fieldname) {
+  return statusOptions(STATUS_COLUMN_DOCTYPE_KEY[fieldname], [], (value) =>
+    updateRowStatus(row, fieldname, value),
+  )
+}
+
+async function updateRowStatus(row, fieldname, value) {
+  try {
+    await call('frappe.client.set_value', {
+      doctype: 'CRM Lead',
+      name: row.name,
+      fieldname,
+      value,
+    })
+    list.value?.reload?.()
+  } catch (err) {
+    toast.error(err.messages?.[0] || __('Error updating status'))
+  }
+}
 
 function isLiked(item) {
   if (item) {

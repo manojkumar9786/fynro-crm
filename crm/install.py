@@ -17,6 +17,7 @@ def before_install():
 
 def after_install(force=False):
 	add_default_lead_statuses()
+	add_default_calling_statuses()
 	add_default_deal_statuses()
 	add_default_communication_statuses()
 	add_default_fields_layout(force)
@@ -35,6 +36,57 @@ def after_install(force=False):
 	add_assignment_rule_property_setters()
 	seed_default_rules_and_mappings()
 	frappe.db.commit()
+
+
+def add_default_calling_statuses():
+	statuses = {
+		"Ringing": {
+			"color": "gray",
+			"type": "Open",
+			"position": 1,
+		},
+		"Answered": {
+			"color": "blue",
+			"type": "Ongoing",
+			"position": 2,
+		},
+		"Call Back Later": {
+			"color": "orange",
+			"type": "Ongoing",
+			"position": 3,
+		},
+		"Not Contactable": {
+			"color": "amber",
+			"type": "Ongoing",
+			"position": 4,
+		},
+		"Call Disconnected": {
+			"color": "cyan",
+			"type": "Ongoing",
+			"position": 5,
+		},
+		"Interested": {
+			"color": "green",
+			"type": "Won",
+			"position": 6,
+		},
+		"Not Interested": {
+			"color": "red",
+			"type": "Lost",
+			"position": 7,
+		},
+	}
+
+	for status in statuses:
+		if frappe.db.exists("CRM Calling Status", status):
+			continue
+
+		doc = frappe.new_doc("CRM Calling Status")
+		doc.calling_status = status
+		doc.color = statuses[status]["color"]
+		doc.type = statuses[status]["type"]
+		doc.position = statuses[status]["position"]
+		doc.insert()
 
 
 def add_default_lead_statuses():
@@ -198,7 +250,7 @@ def add_default_fields_layout(force=False):
 	sidebar_fields_layouts = {
 		"CRM Lead-Side Panel": {
 			"doctype": "CRM Lead",
-			"layout": '[{"label": "Details", "name": "details_section", "opened": true, "columns": [{"name": "column_kl92", "fields": ["organization", "company_description", "website", "territory", "department", "industry", "no_of_employees", "job_title", "source", "lead_owner", "linkedin", "twitter", "facebook"]}]}, {"label": "Person", "name": "person_section", "opened": true, "columns": [{"name": "column_XmW2", "fields": ["salutation", "first_name", "last_name", "email", "mobile_no"]}]}]',
+			"layout": '[{"label": "Details", "name": "details_section", "opened": true, "columns": [{"name": "column_kl92", "fields": ["organization", "company_description", "website", "territory", "department", "industry", "no_of_employees", "job_title", "source", "lead_owner", "calling_status", "not_interest_lead", "is_ringing_rule_bucket", "linkedin", "twitter", "facebook"]}]}, {"label": "Person", "name": "person_section", "opened": true, "columns": [{"name": "column_XmW2", "fields": ["salutation", "first_name", "last_name", "email", "mobile_no"]}]}]',
 		},
 		"CRM Deal-Side Panel": {
 			"doctype": "CRM Deal",
@@ -217,7 +269,7 @@ def add_default_fields_layout(force=False):
 	data_fields_layouts = {
 		"CRM Lead-Data Fields": {
 			"doctype": "CRM Lead",
-			"layout": '[{"label": "Details", "name": "details_section", "opened": true, "columns": [{"name": "column_ZgLG", "fields": ["organization", "company_description", "industry", "no_of_employees"]}, {"name": "column_TbYq", "fields": ["website", "linkedin", "twitter", "facebook", "job_title"]}, {"name": "column_OKSX", "fields": ["territory", "department", "source", "lead_owner"]}]}, {"label": "Person", "name": "person_section", "opened": true, "columns": [{"name": "column_6c5g", "fields": ["salutation", "email"]}, {"name": "column_1n7Q", "fields": ["first_name", "mobile_no"]}, {"name": "column_cT6C", "fields": ["last_name"]}]}]',
+			"layout": '[{"label": "Details", "name": "details_section", "opened": true, "columns": [{"name": "column_ZgLG", "fields": ["organization", "company_description", "industry", "no_of_employees"]}, {"name": "column_TbYq", "fields": ["website", "linkedin", "twitter", "facebook", "job_title"]}, {"name": "column_OKSX", "fields": ["territory", "department", "source", "lead_owner", "calling_status", "not_interest_lead", "is_ringing_rule_bucket"]}]}, {"label": "Person", "name": "person_section", "opened": true, "columns": [{"name": "column_6c5g", "fields": ["salutation", "email"]}, {"name": "column_1n7Q", "fields": ["first_name", "mobile_no"]}, {"name": "column_cT6C", "fields": ["last_name"]}]}]',
 		},
 		"CRM Deal-Data Fields": {
 			"doctype": "CRM Deal",

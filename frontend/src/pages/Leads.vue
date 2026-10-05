@@ -1,7 +1,7 @@
 <template>
   <LayoutHeader>
     <template #left-header>
-      <ViewBreadcrumbs v-model="viewControls" routeName="Leads" />
+      <ViewBreadcrumbs v-model="viewControls" :routeName="listRouteName" />
     </template>
     <template #right-header>
       <CustomActions
@@ -9,6 +9,7 @@
         :actions="leadsListView.customListActions"
       />
       <Button
+        v-if="!isNotInterestMode"
         variant="solid"
         :label="__('Create')"
         iconLeft="plus"
@@ -23,7 +24,11 @@
     v-model:resizeColumn="triggerResize"
     v-model:updatedPageCount="updatedPageCount"
     doctype="CRM Lead"
-    :filters="{ converted: 0 }"
+    :filters="
+      isNotInterestMode
+        ? { not_interest_lead: 1 }
+        : { converted: 0, not_interest_lead: 0 }
+    "
     :options="{
       allowedViews: ['list', 'group_by', 'kanban'],
     }"
@@ -33,11 +38,11 @@
     v-model="leads"
     :options="{
       getRoute: (row) => ({
-        name: 'Lead',
+        name: detailRouteName,
         params: { leadId: row.name },
         query: { view: route.query.view, viewType: route.params.viewType },
       }),
-      onNewClick: (column) => onNewClick(column),
+      onNewClick: isNotInterestMode ? undefined : (column) => onNewClick(column),
     }"
     @update="(data) => viewControls.updateKanbanSettings(data)"
     @loadMore="(columnName) => viewControls.loadMoreKanban(columnName)"
@@ -239,6 +244,7 @@
     v-model:list="leads"
     :rows="rows"
     :columns="columns"
+    :detail-route-name="detailRouteName"
     :options="{
       showTooltip: false,
       resizeColumn: true,
@@ -257,11 +263,11 @@
   />
   <EmptyState
     v-else-if="leads.data && !rows.length"
-    name="Leads"
-    :icon="LeadsIcon"
+    :name="isNotInterestMode ? 'Not Interest Leads' : 'Leads'"
+    :icon="isNotInterestMode ? UserXIcon : LeadsIcon"
   />
   <LeadModal
-    v-if="showLeadModal"
+    v-if="showLeadModal && !isNotInterestMode"
     v-model="showLeadModal"
     :defaults="defaults"
   />
@@ -278,6 +284,7 @@ import TaskIcon from '@/components/Icons/TaskIcon.vue'
 import CommentIcon from '@/components/Icons/CommentIcon.vue'
 import IndicatorIcon from '@/components/Icons/IndicatorIcon.vue'
 import LeadsIcon from '@/components/Icons/LeadsIcon.vue'
+import UserXIcon from '~icons/lucide/user-x'
 import LayoutHeader from '@/components/LayoutHeader.vue'
 import LeadsListView from '@/components/ListViews/LeadsListView.vue'
 import EmptyState from '@/components/ListViews/EmptyState.vue'
@@ -289,6 +296,7 @@ import { getMeta } from '@/stores/meta'
 import { globalStore } from '@/stores/global'
 import { usersStore } from '@/stores/users'
 import { statusesStore } from '@/stores/statuses'
+import { organizationsStore } from '@/stores/organizations'
 import { callEnabled } from '@/composables/telephony'
 import { useBroadcast } from '@/composables/useBroadcast'
 import { formatDate, timeAgo, website, formatTime } from '@/utils'
@@ -302,13 +310,24 @@ const { getFormattedPercent, getFormattedFloat, getFormattedCurrency } =
   getMeta('CRM Lead')
 const { makeCall } = globalStore()
 const { getUser } = usersStore()
-const { getLeadStatus } = statusesStore()
+const { getLeadStatus, getCallingStatus } = statusesStore()
+const { getOrganization } = organizationsStore()
 const { on } = useBroadcast()
 const { updateOnboardingStep } = useOnboarding('frappecrm')
 const { capture } = useTelemetry()
 const { showModal } = useDoctypeModal()
 
 const route = useRoute()
+
+// This page is reused for both /leads and /not-interest-leads: same
+// doctype, different filter, detail route and header actions.
+const isNotInterestMode = computed(() => route.name === 'NotInterestLeads')
+const listRouteName = computed(() =>
+  isNotInterestMode.value ? 'NotInterestLeads' : 'Leads',
+)
+const detailRouteName = computed(() =>
+  isNotInterestMode.value ? 'NotInterestLead' : 'Lead',
+)
 
 const leadsListView = ref(null)
 const showLeadModal = ref(false)
@@ -452,13 +471,25 @@ function parseRows(rows, columns = []) {
           image_label: lead.first_name,
         }
       } else if (row == 'organization') {
-        _rows[row] = lead.organization
+        // organization is a Link to CRM Organization whose own `name` is its
+        // organization_name, so the stored value doubles as the display label.
+        _rows[row] = {
+          label: lead.organization,
+          logo: getOrganization(lead.organization)?.organization_logo,
+        }
       } else if (row === 'website') {
         _rows[row] = website(lead.website)
       } else if (row == 'status') {
         _rows[row] = {
           label: lead.status,
           color: getLeadStatus(lead.status)?.color,
+        }
+      } else if (row == 'calling_status') {
+        _rows[row] = {
+          label: lead.calling_status || '',
+          color: lead.calling_status
+            ? getCallingStatus(lead.calling_status)?.color
+            : '',
         }
       } else if (row == 'sla_status') {
         let value = lead.sla_status

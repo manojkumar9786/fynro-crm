@@ -32,6 +32,8 @@
   "job_title",
   "source",
   "lead_owner",
+  "not_interest_lead",
+  "is_ringing_rule_bucket",
   "organization_tab",
   "section_break_uixv",
   "naming_series",
@@ -40,6 +42,7 @@
   "phone",
   "column_break_dbsv",
   "status",
+  "calling_status",
   "no_of_employees",
   "annual_revenue",
   "image",
@@ -214,9 +217,10 @@
   },
   {
    "fieldname": "organization",
-   "fieldtype": "Data",
+   "fieldtype": "Link",
    "in_standard_filter": 1,
-   "label": "Organization"
+   "label": "Organization",
+   "options": "CRM Organization"
   },
   {
    "default": "0",
@@ -470,6 +474,23 @@
    "in_standard_filter": 1,
    "label": "Department",
    "options": "CRM Department"
+  },
+  {
+   "fieldname": "not_interest_lead",
+   "fieldtype": "Check",
+   "label": "Not Interest Lead"
+  },
+  {
+   "fieldname": "is_ringing_rule_bucket",
+   "fieldtype": "Check",
+   "label": "Is Ringing Rule Bucket"
+  },
+  {
+   "fieldname": "calling_status",
+   "fieldtype": "Link",
+   "label": "Calling Status",
+   "options": "CRM Calling Status",
+   "in_standard_filter": 1
   }
  ],
  "grid_page_length": 50,

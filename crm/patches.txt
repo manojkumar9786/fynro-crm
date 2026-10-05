@@ -32,3 +32,6 @@ crm.patches.v1_0.add_enrichment_fields_to_layouts
 crm.patches.v1_0.reorder_address_quick_entry_layout
 crm.patches.v1_0.create_prospect_customer_fields_layouts
 crm.patches.v1_0.add_department_hierarchy
+crm.patches.v1_0.add_not_interest_lead_fields
+crm.patches.v1_0.add_calling_status
+crm.patches.v1_0.make_organization_a_link_field

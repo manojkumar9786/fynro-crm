@@ -13,7 +13,7 @@ from crm.fcrm.doctype.crm_service_level_agreement.utils import get_sla
 from crm.fcrm.doctype.crm_status_change_log.crm_status_change_log import (
 	add_status_change_log,
 )
-from crm.fcrm.doctype.utils import add_or_remove_lost_reason_section_in_sidepanel
+from crm.fcrm.doctype.utils import add_or_remove_lost_reason_section_in_sidepanel, ensure_organization_exists
 
 LEAD_DEAL_FIELD_MAP = {"lead_owner": "deal_owner"}
 
@@ -34,6 +34,7 @@ class CRMLead(Document):
 		from crm.fcrm.doctype.crm_status_change_log.crm_status_change_log import CRMStatusChangeLog
 
 		annual_revenue: DF.Currency
+		calling_status: DF.Link | None
 		communication_status: DF.Link | None
 		converted: DF.Check
 		email: DF.Data | None
@@ -45,6 +46,7 @@ class CRMLead(Document):
 		gender: DF.Link | None
 		image: DF.AttachImage | None
 		industry: DF.Link | None
+		is_ringing_rule_bucket: DF.Check
 		job_title: DF.Data | None
 		last_name: DF.Data | None
 		last_responded_on: DF.Datetime | None
@@ -55,10 +57,11 @@ class CRMLead(Document):
 		lost_reason: DF.Link | None
 		middle_name: DF.Data | None
 		mobile_no: DF.Data | None
+		not_interest_lead: DF.Check
 		naming_series: DF.Literal["CRM-LEAD-.YYYY.-"]
 		net_total: DF.Currency
 		no_of_employees: DF.Literal["1-10", "11-50", "51-200", "201-500", "501-1000", "1000+"]
-		organization: DF.Data | None
+		organization: DF.Link | None
 		phone: DF.Data | None
 		products: DF.Table[CRMProducts]
 		response_by: DF.Datetime | None
@@ -80,6 +83,15 @@ class CRMLead(Document):
 		from crm.api.form import enrich_form_submission
 
 		enrich_form_submission(self)
+
+	def _validate_links(self):
+		# Document._validate_links() (which rejects a Link field whose value has
+		# no matching record) runs before `validate`/`before_insert`, so the only
+		# place to auto-create the backing CRM Organization is here, ahead of
+		# calling it.
+		if self.organization:
+			ensure_organization_exists(self.organization, self)
+		super()._validate_links()
 
 	def before_validate(self):
 		self.set_sla()
@@ -467,6 +479,13 @@ class CRMLead(Document):
 				"width": "8rem",
 			},
 			{
+				"label": "Calling Status",
+				"type": "Link",
+				"options": "CRM Calling Status",
+				"key": "calling_status",
+				"width": "8rem",
+			},
+			{
 				"label": "Email",
 				"type": "Data",
 				"key": "email",
@@ -496,6 +515,7 @@ class CRMLead(Document):
 			"lead_name",
 			"organization",
 			"status",
+			"calling_status",
 			"email",
 			"mobile_no",
 			"lead_owner",

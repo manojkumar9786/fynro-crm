@@ -40,11 +40,25 @@
           </Button>
         </template>
       </Dropdown>
+      <template v-if="!doc.not_interest_lead">
+        <Button
+          v-if="!doc.prospect"
+          :label="__('Convert to Prospect')"
+          variant="solid"
+          @click="showConvertToProspectModal = true"
+        />
+        <Button
+          :label="__('Moved to Not Interest Leads')"
+          variant="subtle"
+          theme="red"
+          @click="confirmMarkNotInterested"
+        />
+      </template>
       <Button
-        v-if="!doc.prospect"
-        :label="__('Convert to Prospect')"
+        v-else
+        :label="__('Move to Leads')"
         variant="solid"
-        @click="showConvertToProspectModal = true"
+        @click="moveToLeads"
       />
     </template>
   </LayoutHeader>
@@ -376,8 +390,26 @@ watch(
   { once: true },
 )
 
+// This page is reused for /leads/:leadId and /not-interest-leads/:leadId.
+// `not_interest_lead` on the record itself (not the route) decides which
+// list it belongs to, so the breadcrumb and buttons are correct even when
+// the record was reached by a direct/bookmarked link.
+const listRouteName = computed(() =>
+  doc.value.not_interest_lead ? 'NotInterestLeads' : 'Leads',
+)
+const detailRouteName = computed(() =>
+  doc.value.not_interest_lead ? 'NotInterestLead' : 'Lead',
+)
+
 const breadcrumbs = computed(() => {
-  let items = [{ label: __('Leads'), route: { name: 'Leads' } }]
+  let items = [
+    {
+      label: doc.value.not_interest_lead
+        ? __('Not Interest Leads')
+        : __('Leads'),
+      route: { name: listRouteName.value },
+    },
+  ]
 
   if (route.query.view || route.query.viewType) {
     let view = getView(route.query.view, route.query.viewType, 'CRM Lead')
@@ -397,7 +429,7 @@ const breadcrumbs = computed(() => {
   items.push({
     label: title.value,
     route: {
-      name: 'Lead',
+      name: detailRouteName.value,
       params: { leadId: props.leadId },
       query: route.query,
     },
@@ -517,6 +549,56 @@ function updateField(name, value) {
 
 function deleteLead() {
   showDeleteLinkedDocModal.value = true
+}
+
+function confirmMarkNotInterested() {
+  $dialog({
+    title: __('Move to Not Interest Leads'),
+    message: __(
+      'This marks the lead as not interested and moves it out of your active leads. Continue?',
+    ),
+    actions: [
+      {
+        label: __('Move'),
+        variant: 'solid',
+        theme: 'red',
+        onClick: ({ close }) => {
+          close()
+          markNotInterested()
+        },
+      },
+    ],
+  })
+}
+
+function markNotInterested() {
+  let oldValue = doc.value.not_interest_lead
+  doc.value.not_interest_lead = 1
+  document.save.submit(null, {
+    onSuccess: () => {
+      toast.success(__('Lead moved to Not Interest Leads'))
+      router.push({ name: 'NotInterestLeads' })
+    },
+    onError: (err) => {
+      doc.value.not_interest_lead = oldValue
+      toast.error(err.messages?.[0] || __('Error updating lead'))
+    },
+  })
+}
+
+function moveToLeads() {
+  let oldValue = doc.value.not_interest_lead
+  doc.value.not_interest_lead = 0
+  document.save.submit(null, {
+    onSuccess: () => {
+      toast.success(__('Lead moved back to Leads'))
+      router.push({ name: 'Leads' })
+    },
+    onError: (err) => {
+      doc.value.not_interest_lead = oldValue
+      toast.error(err.messages?.[0] || __('Error updating lead'))
+    },
+  })
 }
 
 function openEmailBox() {

@@ -10,6 +10,7 @@ export const statusesStore = defineStore('crm-statuses', () => {
   let dealStatusesByName = reactive({})
   let prospectStatusesByName = reactive({})
   let customerStatusesByName = reactive({})
+  let callingStatusesByName = reactive({})
   let communicationStatusesByName = reactive({})
 
   const { capture } = useTelemetry()
@@ -78,6 +79,22 @@ export const statusesStore = defineStore('crm-statuses', () => {
     },
   })
 
+  const callingStatuses = createListResource({
+    doctype: 'CRM Calling Status',
+    fields: ['name', 'color', 'position', 'type'],
+    orderBy: 'position asc',
+    cache: 'calling-statuses',
+    initialData: [],
+    auto: true,
+    transform(statuses) {
+      for (let status of statuses) {
+        status.color = parseColor(status.color)
+        callingStatusesByName[status.name] = status
+      }
+      return statuses
+    },
+  })
+
   const communicationStatuses = createListResource({
     doctype: 'CRM Communication Status',
     fields: ['name'],
@@ -120,6 +137,11 @@ export const statusesStore = defineStore('crm-statuses', () => {
     return customerStatusesByName[name]
   }
 
+  function getCallingStatus(name) {
+    if (!name) return null
+    return callingStatusesByName[name]
+  }
+
   function getCommunicationStatus(name) {
     if (!name) {
       name = communicationStatuses.data[0].name
@@ -133,6 +155,7 @@ export const statusesStore = defineStore('crm-statuses', () => {
       deal: [dealStatusesByName, 'CRM Deal Status'],
       prospect: [prospectStatusesByName, 'CRM Prospect Status'],
       customer: [customerStatusesByName, 'CRM Customer Status'],
+      calling: [callingStatusesByName, 'CRM Calling Status'],
     }
     const [allStatusesByName, statusDoctype] =
       statusMaps[doctype] || statusMaps.lead
@@ -169,11 +192,13 @@ export const statusesStore = defineStore('crm-statuses', () => {
     dealStatuses,
     prospectStatuses,
     customerStatuses,
+    callingStatuses,
     communicationStatuses,
     getLeadStatus,
     getDealStatus,
     getProspectStatus,
     getCustomerStatus,
+    getCallingStatus,
     getCommunicationStatus,
     statusOptions,
   }

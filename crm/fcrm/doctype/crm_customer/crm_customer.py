@@ -52,7 +52,7 @@ class CRMCustomer(PipelineRecord):
 		net_total: DF.Currency
 		next_step: DF.Data | None
 		no_of_employees: DF.Literal["1-10", "11-50", "51-200", "201-500", "501-1000", "1000+"]
-		organization: DF.Data | None
+		organization: DF.Link | None
 		organization_logo: DF.AttachImage | None
 		organization_name: DF.Data | None
 		phone: DF.Data | None

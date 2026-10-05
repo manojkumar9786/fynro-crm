@@ -49,6 +49,18 @@ const routes = [
     props: true,
   },
   {
+    alias: '/not-interest-leads',
+    path: '/not-interest-leads/view/:viewType?',
+    name: 'NotInterestLeads',
+    component: () => import('@/pages/Leads.vue'),
+  },
+  {
+    path: '/not-interest-leads/:leadId',
+    name: 'NotInterestLead',
+    component: () => import(`@/pages/${handleMobileView('Lead')}.vue`),
+    props: true,
+  },
+  {
     alias: '/deals',
     path: '/deals/view/:viewType?',
     name: 'Deals',
@@ -252,7 +264,9 @@ router.beforeEach(async (to, from, next) => {
   } else if (to.matched.length === 0) {
     next({ name: 'Invalid Page' })
   } else if (
-    ['Deal', 'Lead', 'Prospect', 'Customer'].includes(to.name) &&
+    ['Deal', 'Lead', 'NotInterestLead', 'Prospect', 'Customer'].includes(
+      to.name,
+    ) &&
     !to.hash
   ) {
     let storageKey = `last${to.name}Tab`
@@ -262,6 +276,7 @@ router.beforeEach(async (to, from, next) => {
   } else if (
     [
       'Leads',
+      'NotInterestLeads',
       'Deals',
       'Prospects',
       'Customers',
@@ -282,6 +297,7 @@ router.beforeEach(async (to, from, next) => {
     if (!viewType) {
       const doctypeMap = {
         Leads: 'CRM Lead',
+        NotInterestLeads: 'CRM Lead',
         Deals: 'CRM Deal',
         Prospects: 'CRM Prospect',
         Customers: 'CRM Customer',

@@ -3,6 +3,25 @@ import json
 import frappe
 
 
+def ensure_organization_exists(organization_name, doc=None):
+	"""Auto-create a matching CRM Organization so `organization` (a Link field on
+	CRM Lead / Prospect / Customer) never breaks when set to a plain company name —
+	by domain enrichment, a Facebook/LinkedIn lead, data import, or a user typing a
+	new name into the field. `doc` (the record being saved) donates its own
+	website/territory/industry/annual_revenue to a newly created Organization,
+	mirroring CRM Lead.create_organization()."""
+	if not organization_name or frappe.db.exists("CRM Organization", organization_name):
+		return
+
+	organization = frappe.new_doc("CRM Organization")
+	organization.organization_name = organization_name
+	if doc:
+		for fieldname in ("website", "territory", "industry", "annual_revenue"):
+			if doc.meta.has_field(fieldname) and doc.get(fieldname):
+				organization.set(fieldname, doc.get(fieldname))
+	organization.insert(ignore_permissions=True)
+
+
 def add_or_remove_lost_reason_section_in_sidepanel(doc):
 	doctype = doc.doctype
 	status_doctypes = {

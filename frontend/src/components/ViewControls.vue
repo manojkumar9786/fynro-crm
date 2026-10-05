@@ -524,7 +524,10 @@ function getParams() {
 list.value = createResource({
   url: 'crm.api.doc.get_data',
   params: getParams(),
-  cache: [props.doctype, route.query.view, route.params.viewType],
+  // route.name distinguishes screens that share a doctype but filter it
+  // differently (e.g. Leads vs Not Interest Leads both list CRM Lead) —
+  // without it they'd collide on the same cached list state.
+  cache: [props.doctype, route.name, route.query.view, route.params.viewType],
   auto: true,
   onSuccess(data) {
     let cv = getView(route.query.view, route.params.viewType, props.doctype)
